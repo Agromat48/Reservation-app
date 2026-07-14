@@ -19,6 +19,9 @@ target/
 *.iml
 *.ipr
 
+# Игнорировать скрытые метки безопасности Windows (Zone.Identifier)
+*Zone.Identifier
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/

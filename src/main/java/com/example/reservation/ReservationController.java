@@ -1,11 +1,18 @@
 package com.example.reservation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 public class ReservationController {
+    private static final Logger log = LoggerFactory.getLogger(ReservationController.class);
+
     private final ReservationService reservationService;
 
     @Autowired
@@ -13,8 +20,17 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
+    @GetMapping("/{id}")
+    public Reservation getReservationById(
+            @PathVariable("id") Long id
+    ) {
+        log.info("Called getReservationById, id: "+id);
+        return reservationService.getReservationById(id);
+    }
+
     @GetMapping()
-    public String getReservationById() {
-        return reservationService.getReservationById();
+    public List<Reservation> getAllReservation() {
+        log.info("Called getAllReservation");
+        return reservationService.findAllReservation();
     }
 }
