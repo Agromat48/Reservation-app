@@ -1,36 +1,48 @@
 package com.example.reservation;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
+@RequestMapping("/reservation")
 public class ReservationController {
-    private static final Logger log = LoggerFactory.getLogger(ReservationController.class);
 
+    private static final Logger log = LoggerFactory.getLogger(ReservationController.class);
     private final ReservationService reservationService;
 
-    @Autowired
     public ReservationController(ReservationService reservationService) {
         this.reservationService = reservationService;
     }
 
     @GetMapping("/{id}")
-    public Reservation getReservationById(
+    public ResponseEntity<Reservation> getReservationById(
             @PathVariable("id") Long id
     ) {
         log.info("Called getReservationById, id: "+id);
-        return reservationService.getReservationById(id);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(reservationService.getReservationById(id));
     }
 
-    @GetMapping()
-    public List<Reservation> getAllReservation() {
+    @GetMapping
+    public ResponseEntity<List<Reservation>> getAllReservation() {
         log.info("Called getAllReservation");
-        return reservationService.findAllReservation();
+        return ResponseEntity.ok(reservationService.findAllReservation());
+    }
+
+    @PostMapping
+    public ResponseEntity<Reservation> createReservation(
+            @RequestBody Reservation reservationToCreate
+    ) {
+        log.info("Called createReservation");
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(reservationService.createReservation(reservationToCreate));
     }
 }
