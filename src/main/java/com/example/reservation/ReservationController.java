@@ -1,9 +1,7 @@
 package com.example.reservation;
 
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -65,14 +63,14 @@ public class ReservationController {
         return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id}/cancel")
     public ResponseEntity<Void> deleteReservation(
             @PathVariable("id") Long id
     ) {
         log.info("Called deleteReservation id = {}", id);
 
         try {
-            reservationService.deleteReservation(id);
+            reservationService.cancelReservation(id);
             return ResponseEntity.ok().build();
         }
         catch (NoSuchElementException e) {
