@@ -1,4 +1,4 @@
-package com.example.reservation;
+package com.example.reservation.web;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -9,7 +9,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import javax.swing.text.html.parser.Entity;
 import java.time.LocalDateTime;
 
 @ControllerAdvice
@@ -18,10 +17,10 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponceDto> handleGenericException(Exception ex) {
+    public ResponseEntity<ErrorResponseDto> handleGenericException(Exception ex) {
         log.error("Handle exception", ex);
 
-        var errorDto = new ErrorResponceDto(
+        var errorDto = new ErrorResponseDto(
                 "Iternal server error",
                 ex.getMessage(),
                 LocalDateTime.now()
@@ -33,10 +32,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponceDto> handleEntityNotFound(EntityNotFoundException ex) {
+    public ResponseEntity<ErrorResponseDto> handleEntityNotFound(EntityNotFoundException ex) {
         log.error("Handle entityNotFoundException", ex);
 
-        var errorDto = new ErrorResponceDto(
+        var errorDto = new ErrorResponseDto(
                 "Entity not found",
                 ex.getMessage(),
                 LocalDateTime.now()
@@ -52,10 +51,10 @@ public class GlobalExceptionHandler {
             IllegalStateException.class,
             MethodArgumentNotValidException.class
     })
-    public ResponseEntity<ErrorResponceDto> handleBadRequest(Exception ex) {
+    public ResponseEntity<ErrorResponseDto> handleBadRequest(Exception ex) {
         log.error("Handle IllegalArgumentException", ex);
 
-        var errorDto = new ErrorResponceDto(
+        var errorDto = new ErrorResponseDto(
                 "Bad request",
                 ex.getMessage(),
                 LocalDateTime.now()

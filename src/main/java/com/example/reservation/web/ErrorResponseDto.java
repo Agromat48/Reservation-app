@@ -1,9 +1,8 @@
-package com.example.reservation;
+package com.example.reservation.web;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public record ErrorResponceDto (
+public record ErrorResponseDto(
         String message,
         String detailedMessage,
         LocalDateTime errorTime
