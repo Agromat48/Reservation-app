@@ -2,10 +2,12 @@ package com.example.reservation.reservations;
 
 import com.example.reservation.reservations.availability.ReservationAvailabilityService;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
@@ -25,10 +27,10 @@ class ReservationServiceTest {
     private ReservationRepository repository;
 
     @Mock
-    private ReservationMapper mapper;
+    private ReservationAvailabilityService availabilityService;
 
     @Mock
-    private ReservationAvailabilityService availabilityService;
+    private ReservationMapper mapper;
 
     @InjectMocks
     private ReservationService service;
@@ -48,65 +50,92 @@ class ReservationServiceTest {
     void getReservationById_returnsReservation() {
         ReservationEntity entity = entity(1L, ReservationStatus.PENDING);
         Reservation reservation = reservation(1L, ReservationStatus.PENDING);
-        when(repository.findById(1L)).thenReturn(Optional.of(entity));
-        when(mapper.toDomain(entity)).thenReturn(reservation);
+        Mockito.when(repository.findById(1L))
+                .thenReturn(Optional.of(entity));
+        Mockito.when(mapper.toDomain(entity))
+                .thenReturn(reservation);
 
-        Reservation result = service.getReservationById(1L);
+        Reservation reservationById = service.getReservationById(1L);
 
-        assertEquals(reservation, result);
-        verify(repository).findById(1L);
+        Assertions.assertEquals(reservationById, reservation);
     }
 
     @Test
     void getReservationById_whenNotFound_throwsException() {
-        when(repository.findById(1L)).thenReturn(Optional.empty());
+        Mockito.when(repository.findById(1L))
+                .thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> service.getReservationById(1L));
+        Assertions.assertThrows(EntityNotFoundException.class,
+                () -> service.getReservationById(1L));
     }
 
     @Test
     void searchAllByFilter_withoutPagination_usesDefaults() {
-        ReservationSearchFilter filter = new ReservationSearchFilter(null, null, null, null);
+        ReservationSearchFilter filter = new ReservationSearchFilter(20L, 10L, null, null);
         ReservationEntity entity = entity(1L, ReservationStatus.PENDING);
         Reservation reservation = reservation(1L, ReservationStatus.PENDING);
-        when(repository.searchAllByFilter(null, null, Pageable.ofSize(10).withPage(0)))
+        Pageable defaultPageable = Pageable.ofSize(10).withPage(0);
+
+        Mockito.when(repository.searchAllByFilter(20L, 10L, defaultPageable))
                 .thenReturn(List.of(entity));
-        when(mapper.toDomain(entity)).thenReturn(reservation);
+        Mockito.when(mapper.toDomain(entity))
+                .thenReturn(reservation);
 
         List<Reservation> result = service.searchAllByFilter(filter);
 
-        assertEquals(List.of(reservation), result);
-        verify(repository).searchAllByFilter(null, null, Pageable.ofSize(10).withPage(0));
+        Assertions.assertEquals(List.of(reservation), result);
+
+        Mockito.verify(repository).searchAllByFilter(20L, 10L, defaultPageable);
     }
 
     @Test
     void createReservation_setsPendingStatusAndSaves() {
         Reservation reservation = reservation(null, null);
-        ReservationEntity entity = entity(null, null);
-        Reservation saved = reservation(1L, ReservationStatus.PENDING);
-        when(mapper.toEntity(reservation)).thenReturn(entity);
-        when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDomain(entity)).thenReturn(saved);
+        Reservation reservationPending = reservation(1L, ReservationStatus.PENDING);
+        ReservationEntity entityToSave = entity(null, null);
+        ReservationEntity savedEntity = entity(1L, ReservationStatus.PENDING);
+
+        when(mapper.toEntity(reservation)).thenReturn(entityToSave);
+        when(repository.save(entityToSave)).thenReturn(savedEntity);
+        when(mapper.toDomain(savedEntity)).thenReturn(reservationPending);
 
         Reservation result = service.createReservation(reservation);
 
-        assertEquals(ReservationStatus.PENDING, entity.getStatus());
-        assertEquals(saved, result);
-        verify(repository).save(entity);
+        assertEquals(ReservationStatus.PENDING, entityToSave.getStatus());
+        assertEquals(reservationPending, result);
+
+        verify(repository).save(entityToSave);
     }
 
     @Test
     void createReservation_whenStatusIsSet_throwsException() {
-        Reservation reservation = reservation(null, ReservationStatus.APPROVED);
+        Reservation reservation = reservation(1L, ReservationStatus.PENDING);
 
-        assertThrows(IllegalArgumentException.class, () -> service.createReservation(reservation));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.createReservation(reservation));
+
+        Assertions.assertEquals("Status should be empty", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
     }
 
     @Test
     void createReservation_whenInvalidDates_throwsException() {
-        Reservation reservation = new Reservation(null, 10L, 20L, endDate, startDate, null);
+        Reservation reservation = new Reservation(
+                null,
+                1L,
+                2L,
+                endDate,
+                startDate,
+                null
+                );
 
-        assertThrows(IllegalArgumentException.class, () -> service.createReservation(reservation));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.createReservation(reservation));
+
+        Assertions.assertEquals("Start date should be after end date", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
     }
 
     @Test
@@ -115,77 +144,172 @@ class ReservationServiceTest {
         Reservation update = reservation(null, null);
         ReservationEntity entityToSave = entity(null, null);
         Reservation updated = reservation(1L, ReservationStatus.PENDING);
-        when(repository.findById(1L)).thenReturn(Optional.of(existing));
-        when(mapper.toEntity(update)).thenReturn(entityToSave);
-        when(repository.save(entityToSave)).thenReturn(entityToSave);
-        when(mapper.toDomain(entityToSave)).thenReturn(updated);
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        Mockito.when(mapper.toEntity(update)).thenReturn(entityToSave);
+        Mockito.when(repository.save(entityToSave)).thenReturn(entityToSave);
+        Mockito.when(mapper.toDomain(entityToSave)).thenReturn(updated);
 
         Reservation result = service.updateReservation(1L, update);
 
-        assertEquals(1L, entityToSave.getId());
-        assertEquals(ReservationStatus.PENDING, entityToSave.getStatus());
-        assertEquals(updated, result);
-        verify(repository).save(entityToSave);
+        Assertions.assertEquals(1L, entityToSave.getId());
+        Assertions.assertEquals(ReservationStatus.PENDING, entityToSave.getStatus());
+        Assertions.assertEquals(updated, result);
+
+        Mockito.verify(repository).save(entityToSave);
     }
 
     @Test
     void updateReservation_whenNotPending_throwsException() {
         ReservationEntity existing = entity(1L, ReservationStatus.APPROVED);
-        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        Reservation update = reservation(null, null);
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> service.updateReservation(1L, reservation(null, null))
-        );
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> service.updateReservation(1L, update));
+
+        Assertions.assertEquals("Cannot modify reservation: status = APPROVED", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
+    }
+
+    @Test
+    void updateReservation_whenNotFound_throwsException() {
+        Reservation update = reservation(null, null);
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.empty());
+
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
+                () -> service.updateReservation(1L, update));
+
+        Assertions.assertEquals("Reservation with id 1 not found!", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
+    }
+
+    @Test
+    void updateReservation_whenInvalidDates_throwsException() {
+        ReservationEntity existing = entity(1L, ReservationStatus.PENDING);
+        Reservation update = new Reservation(null, 10L, 20L, endDate, startDate, null);
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(existing));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.updateReservation(1L, update));
+
+        Assertions.assertEquals("Start date should be after end date", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
     }
 
     @Test
     void cancelReservation_whenPending_setsCancelledStatus() {
         ReservationEntity pending = entity(1L, ReservationStatus.PENDING);
-        when(repository.findById(1L)).thenReturn(Optional.of(pending));
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(pending));
 
         service.cancelReservation(1L);
 
-        verify(repository).setStatus(1L, ReservationStatus.CANCELLED);
+        Mockito.verify(repository).setStatus(1L, ReservationStatus.CANCELLED);
     }
 
     @Test
     void cancelReservation_whenAlreadyCancelled_throwsException() {
         ReservationEntity cancelled = entity(1L, ReservationStatus.CANCELLED);
-        when(repository.findById(1L)).thenReturn(Optional.of(cancelled));
 
-        assertThrows(IllegalStateException.class, () -> service.cancelReservation(1L));
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(cancelled));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> service.cancelReservation(1L));
+
+        Assertions.assertEquals("Cannot cancel the reservation. Reservation was already cancelled",
+                exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).setStatus(Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void cancelReservation_whenNotFound_throwsException() {
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.empty());
+
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
+                () -> service.cancelReservation(1L));
+
+        Assertions.assertEquals("Reservation with id 1 not found!", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).setStatus(Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void cancelReservation_whenApproved_throwsException() {
+        ReservationEntity approved = entity(1L, ReservationStatus.APPROVED);
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(approved));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> service.cancelReservation(1L));
+
+        Assertions.assertEquals("Cannot cancel reservation: status = APPROVED", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).setStatus(Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void approveReservation_whenNotFound_throwsException() {
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.empty());
+
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
+                () -> service.approveReservation(1L));
+
+        Assertions.assertEquals("Reservation with id 1 not found!", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
     }
 
     @Test
     void approveReservation_whenAvailable_setsApprovedStatus() {
         ReservationEntity pending = entity(1L, ReservationStatus.PENDING);
         Reservation approved = reservation(1L, ReservationStatus.APPROVED);
-        when(repository.findById(1L)).thenReturn(Optional.of(pending));
-        when(availabilityService.isReservationAvailable(20L, startDate, endDate)).thenReturn(true);
-        when(mapper.toDomain(pending)).thenReturn(approved);
+
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(pending));
+        Mockito.when(availabilityService.isReservationAvailable(20L, startDate, endDate)).thenReturn(true);
+        Mockito.when(mapper.toDomain(pending)).thenReturn(approved);
 
         Reservation result = service.approveReservation(1L);
 
-        assertEquals(ReservationStatus.APPROVED, pending.getStatus());
-        assertEquals(approved, result);
-        verify(repository).save(pending);
+        Assertions.assertEquals(ReservationStatus.APPROVED, pending.getStatus());
+        Assertions.assertEquals(approved, result);
+
+        Mockito.verify(repository).save(pending);
     }
 
     @Test
     void approveReservation_whenConflict_throwsException() {
         ReservationEntity pending = entity(1L, ReservationStatus.PENDING);
-        when(repository.findById(1L)).thenReturn(Optional.of(pending));
-        when(availabilityService.isReservationAvailable(20L, startDate, endDate)).thenReturn(false);
 
-        assertThrows(IllegalStateException.class, () -> service.approveReservation(1L));
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(pending));
+        Mockito.when(availabilityService.isReservationAvailable(20L, startDate, endDate)).thenReturn(false);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> service.approveReservation(1L));
+
+        Assertions.assertEquals("Cannot approve reservation because of conflict", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
     }
 
     @Test
     void approveReservation_whenNotPending_throwsException() {
         ReservationEntity approved = entity(1L, ReservationStatus.APPROVED);
-        when(repository.findById(1L)).thenReturn(Optional.of(approved));
 
-        assertThrows(IllegalStateException.class, () -> service.approveReservation(1L));
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(approved));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> service.approveReservation(1L));
+
+        Assertions.assertEquals("Cannot approve reservation: status = APPROVED", exception.getMessage());
+
+        Mockito.verify(repository, Mockito.times(0)).save(Mockito.any());
     }
 }
