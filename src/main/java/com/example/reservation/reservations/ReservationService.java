@@ -28,10 +28,14 @@ public class ReservationService {
     }
 
     public Reservation getReservationById(Long id) {
-        ReservationEntity reservationEntity = repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reservation with id " + id + " not found!"));
+        ReservationEntity reservationEntity = getEntityOrThrow(id);
 
         return mapper.toDomain(reservationEntity);
+    }
+
+    private ReservationEntity getEntityOrThrow(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Reservation with id " + id + " not found!"));
     }
 
     public List<Reservation> searchAllByFilter(
@@ -60,9 +64,7 @@ public class ReservationService {
             throw new IllegalArgumentException("Status should be empty");
         }
 
-        if(!reservationToCreate.endDate().isAfter(reservationToCreate.startDate())) {
-            throw new IllegalArgumentException("Start date should be after end date");
-        }
+        ReservationAvailabilityService.validateDateRange(reservationToCreate.startDate(), reservationToCreate.endDate());
 
         var entityToSave = mapper.toEntity(reservationToCreate);
         entityToSave.setStatus(ReservationStatus.PENDING);
@@ -72,15 +74,12 @@ public class ReservationService {
     }
 
     public Reservation updateReservation(Long id, Reservation reservationToUpdate) {
-        var reservationEntity = repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reservation with id " + id + " not found!"));
+        var reservationEntity = getEntityOrThrow(id);
 
         if(reservationEntity.getStatus() != ReservationStatus.PENDING)
             throw new IllegalStateException("Cannot modify reservation: status = " + reservationEntity.getStatus());
 
-        if(!reservationToUpdate.endDate().isAfter(reservationToUpdate.startDate())) {
-            throw new IllegalArgumentException("Start date should be after end date");
-        }
+        ReservationAvailabilityService.validateDateRange(reservationToUpdate.startDate(), reservationToUpdate.endDate());
 
         var reservationToSave = mapper.toEntity(reservationToUpdate);
         reservationToSave.setId(reservationEntity.getId());
@@ -92,8 +91,7 @@ public class ReservationService {
 
     @Transactional
     public void cancelReservation(Long id) {
-        var reservation = repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reservation with id " + id + " not found!"));
+        var reservation = getEntityOrThrow(id);
 
         if(reservation.getStatus().equals(ReservationStatus.APPROVED)) {
             throw new IllegalStateException("Cannot cancel reservation: status = " + reservation.getStatus());
@@ -108,8 +106,7 @@ public class ReservationService {
     }
 
     public Reservation approveReservation(Long id) {
-        ReservationEntity reservationEntity = repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reservation with id " + id + " not found!"));
+        ReservationEntity reservationEntity = getEntityOrThrow(id);
 
         if(reservationEntity.getStatus() != ReservationStatus.PENDING)
             throw  new  IllegalStateException("Cannot approve reservation: status = " + reservationEntity.getStatus());

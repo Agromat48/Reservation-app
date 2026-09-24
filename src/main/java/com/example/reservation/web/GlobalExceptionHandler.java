@@ -20,30 +20,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDto> handleGenericException(Exception ex) {
         log.error("Handle exception", ex);
 
-        var errorDto = new ErrorResponseDto(
-                "Iternal server error",
-                ex.getMessage(),
-                LocalDateTime.now()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorDto);
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Iternal server error", ex.getMessage());
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleEntityNotFound(EntityNotFoundException ex) {
         log.error("Handle entityNotFoundException", ex);
 
-        var errorDto = new ErrorResponseDto(
-                "Entity not found",
-                ex.getMessage(),
-                LocalDateTime.now()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(errorDto);
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Entity not found", ex.getMessage());
     }
 
     @ExceptionHandler(exception = {
@@ -54,14 +38,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDto> handleBadRequest(Exception ex) {
         log.error("Handle IllegalArgumentException", ex);
 
-        var errorDto = new ErrorResponseDto(
-                "Bad request",
-                ex.getMessage(),
-                LocalDateTime.now()
-        );
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad request", ex.getMessage());
+    }
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(errorDto);
+    private ResponseEntity<ErrorResponseDto> buildErrorResponse(HttpStatus status, String error, String message) {
+        var errorDto = new ErrorResponseDto(error, message, LocalDateTime.now());
+        return ResponseEntity.status(status).body(errorDto);
     }
 }

@@ -25,9 +25,7 @@ public class ReservationAvailabilityService {
             LocalDate endDate
     ){
 
-        if(!endDate.isAfter(startDate)) {
-            throw new IllegalArgumentException("Start date should be after end date");
-        }
+        validateDateRange(startDate, endDate);
 
         List<Long> conflictsIds = repository.findConflictReservations(
                 roomId,
@@ -40,5 +38,11 @@ public class ReservationAvailabilityService {
 
         log.info("Conflicts with ids = {}", conflictsIds);
         return false;
+    }
+
+    public static void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (!endDate.isAfter(startDate)) {
+            throw new IllegalArgumentException("Start date should be after end date");
+        }
     }
 }
